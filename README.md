@@ -1,4 +1,177 @@
-# Can I cache this?
+**Testing Power BI accessibility features**
+
+Practical test plan for **Desktop → Service → embed**. Use keyboard + at least one screen reader.
+
+---
+
+### 1. What to test (feature map)
+
+| Area | What Power BI offers | What you verify |
+|------|----------------------|-----------------|
+| **Alt text** | Per-visual alt text | Spoken / exposed description matches insight |
+| **Tab order** | Selection pane order | Focus order is logical |
+| **Keyboard nav** | Tab, arrows, Enter, Esc in reports | No traps; panes open/close |
+| **Screen reader** | Names, roles, table data where exposed | Labels not “blank” / “chart” only |
+| **Themes / contrast** | Report theme, colors | Text ≥ 4.5:1; not color-only meaning |
+| **Data labels** | On charts | Values available without hover-only |
+| **Table / matrix** | Native grid | Headers + values navigable |
+| **Export** | Data / underlying data (where allowed) | Equivalent data outside visuals |
+| **Embed** | iframe + host page | `title`, focus in/out, host alternatives |
+
+---
+
+### 2. Prepare a test report
+
+Use a **small** report with:
+
+1. One KPI card  
+2. One bar or line chart (with **data labels** on)  
+3. One **table** or matrix with the same metrics  
+4. One **slicer** or filter  
+5. Optional: bookmark or button  
+
+In **Desktop**, for each visual:
+
+- **Format → General → Properties → Alt text** (or current “Alt text” field)  
+- Set a real description (metric + takeaway + “sandbox” if applicable)  
+- **View → Selection** — order top-to-bottom = intended tab/read order  
+- Turn **on data labels** for the chart  
+
+Publish to **Service** (or use Desktop if you’re only testing authoring).
+
+---
+
+### 3. Desktop / Service — keyboard test
+
+**Do not use the mouse.**
+
+| Step | Action | Pass |
+|------|--------|------|
+| 1 | Open report | Focus visible on a control |
+| 2 | **Tab** through slicer → KPI → chart → table | Order matches Selection pane / logic |
+| 3 | **Shift+Tab** reverse | Returns without skip/jump chaos |
+| 4 | Open filter pane (keyboard) | Can move through filters |
+| 5 | **Esc** or Close | Pane closes; focus recoverable |
+| 6 | On table: arrows / Tab as supported | Cells/headers announced or focus moves predictably |
+| 7 | Activate button/bookmark if any | Works with Enter/Space |
+
+**Fail:** focus disappears, cycles forever inside one visual, or cannot leave filter pane.
+
+---
+
+### 4. Screen reader test (Service or Desktop)
+
+**Windows:** NVDA + Edge/Chrome  
+**Mac:** VoiceOver + Safari  
+
+| Step | Listen for | Fail if |
+|------|------------|---------|
+| Report loads | Page/report context | Silence or generic only |
+| Each visual | **Alt text** or useful name | “Chart”, “Image”, “Blank” |
+| Slicer | Name + value/state | “Combobox” with no name |
+| Table | Column headers + values | Numbers without headers |
+| After filter change | Updated context if available | No way to know data changed except visually |
+
+Also open **Show data** / table view where the product allows and confirm the grid is usable with the SR.
+
+---
+
+### 5. Visual design checks (no SR required)
+
+| Check | How |
+|-------|-----|
+| Contrast | Theme text/icons vs background; aim **4.5:1** for body text |
+| Color-only | Remove color cues mentally: do labels/legend/patterns still work? |
+| Zoom | Browser or OS zoom **200%** — labels not clipped, no essential hover-only info |
+| Data labels | On for key series so values aren’t hover-only |
+
+---
+
+### 6. Embed-specific tests (host page)
+
+Power BI features alone are not enough when embedded.
+
+```html
+<iframe
+  title="Sandbox portfolio metrics — contributions by quarter"
+  src="https://app.powerbi.com/view?r=..."
+  ...
+></iframe>
+```
+
+| Step | Pass criteria |
+|------|----------------|
+| iframe `title` | Descriptive, unique |
+| Tab into iframe | Focus enters report |
+| Tab out | Focus reaches host controls again (**no trap**) |
+| Host **text summary** | Same insights without charts |
+| Host **HTML table** or CSV link | Same data as visuals |
+| Screen reader on host | Summary + table usable without using the iframe |
+
+---
+
+### 7. Feature deep-dives
+
+**Alt text**  
+- Write *what + so what*, not chart type only.  
+- Re-test after changing the visual type (alt text can be cleared).
+
+**Tab order**  
+- Selection pane: drag order = tab order.  
+- Hide decorative shapes from tab order if the product allows.
+
+**Tables**  
+- Prefer a real table visual for SR users.  
+- Matrix: check header announcement depth (can be harder).
+
+**Slicers**  
+- Every slicer needs a visible title (becomes accessible name).  
+- Test multi-select with keyboard only.
+
+**Tooltips**  
+- Hover tooltips are **not** enough; put critical values in labels, table, or alt text.
+
+**Export**  
+- If security allows, verify **Export data** and that a host-page CSV matches the report.
+
+---
+
+### 8. Scorecard (copy for QA)
+
+| Feature | Desktop | Service | Embed + host | Notes |
+|---------|---------|---------|--------------|-------|
+| Alt text on all visuals | □ | □ | □ | |
+| Logical tab order | □ | □ | □ | |
+| Keyboard filter pane | □ | □ | □ | |
+| No keyboard trap | □ | □ | □ | |
+| Table equivalent | □ | □ | □ | |
+| Contrast / not color-only | □ | □ | □ | |
+| SR: named controls | □ | □ | □ | |
+| Host summary + CSV | N/A | N/A | □ | |
+| iframe title | N/A | N/A | □ | |
+
+**Release rule:** any **Must-have** fail (trap, no non-visual equivalent, keyboard-blocked tasks) blocks “accessible” claims.
+
+---
+
+### 9. Known limits (set expectations)
+
+- Interactive Power BI will not behave like a fully hand-coded WCAG page.  
+- Compliance for most organizations = **report hardening + host page alternatives**.  
+- “Publish to web” embeds are weaker for enterprise a11y/security than secure embed / app owns data.  
+- Retest after **theme**, **visual type**, or **embed URL** changes.
+
+---
+
+### 10. Minimum 30-minute test
+
+1. Alt text on every visual + table with same data (10 min)  
+2. Keyboard-only pass including filter pane (10 min)  
+3. NVDA/VoiceOver on Service + Tab in/out of embed (10 min)  
+
+If those three pass and the host page has summary + table/CSV, you have a defensible baseline.
+
+I can turn this into a one-page **QA script** (step → expected speech → pass/fail) tailored to Apex sandbox wording if you want that next.# Can I cache this?
 
 This library tells when responses can be reused from a cache, taking into account [HTTP RFC 7234/9111](http://httpwg.org/specs/rfc9111.html) rules for user agents and shared caches.
 It also implements `stale-if-error` and `stale-while-revalidate` from [RFC 5861](https://tools.ietf.org/html/rfc5861).
